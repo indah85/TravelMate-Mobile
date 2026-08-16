@@ -27,6 +27,8 @@ import api, {
   WEB_BASE_URL,
 } from "@/services/api";
 
+import { WebView } from "react-native-webview";
+
 
 
 
@@ -126,6 +128,8 @@ export default function DetailScreen() {
           `/destinations/${id}`
         );
 
+        console.log("VIDEO URL:", response.data.videoUrl);
+
         console.log(
           "MOBILE DETAIL:",
           response.data
@@ -219,6 +223,22 @@ export default function DetailScreen() {
   const description =
     destination.description ||
     "Nikmati pengalaman wisata dan keindahan lokal yang menjadi daya tarik destinasi ini.";
+
+  const getYoutubeEmbedUrl = (url: string) => {
+    if (!url) return null;
+
+    const match = url.match(
+      /(?:youtu\.be\/|youtube\.com\/watch\?v=)([^?&]+)/
+    );
+
+    if (!match) return null;
+
+    return `https://www.youtube.com/embed/${match[1]}`;
+  };
+
+  const youtubeUrl = getYoutubeEmbedUrl(
+    destination.videoUrl
+  );
 
 
   const openMaps = () => {
@@ -336,6 +356,19 @@ export default function DetailScreen() {
       <Text style={styles.description}>
         {description}
       </Text>
+
+      {youtubeUrl && (
+        <View style={styles.videoContainer}>
+          <WebView
+            source={{ uri: youtubeUrl }}
+            style={styles.video}
+            allowsFullscreenVideo
+            allowsInlineMediaPlayback
+            javaScriptEnabled
+            domStorageEnabled
+          />
+        </View>
+      )}
 
 
         <View style={styles.separator} />
@@ -665,6 +698,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#eaf5f6",
     borderColor: "#157791",
   },
+
+  videoContainer: {
+  marginTop: 24,
+  height: 220,
+  borderRadius: 14,
+  overflow: "hidden",
+  backgroundColor: "#000000",
+},
+
+video: {
+  flex: 1,
+},
 
 
 });
