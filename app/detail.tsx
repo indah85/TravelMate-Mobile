@@ -13,9 +13,14 @@ import {
 import {
   router,
   useLocalSearchParams,
+  useFocusEffect,
 } from "expo-router";
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 import * as SecureStore from "expo-secure-store";
 import { Ionicons } from "@expo/vector-icons";
 import api, {
@@ -32,6 +37,10 @@ export default function DetailScreen() {
 
     const [loadingFavorite, setLoadingFavorite] =
         useState(false);
+
+    const [isAuthenticated, setIsAuthenticated] =
+        useState(false);
+
     const { id } = useLocalSearchParams();
 
     const [destination, setDestination] =
@@ -42,83 +51,68 @@ export default function DetailScreen() {
 
     const [error, setError] =
         useState(false);
-
-    const toggleFavorite = async () => {
-        try {
-            const token =
+       
+    useFocusEffect(
+      useCallback(() => {
+        const checkAuthentication = async () => {
+          const token =
             await SecureStore.getItemAsync("token");
 
-            // Belum login
-            if (!token) {
-            Alert.alert(
-                "Login diperlukan",
-                "Silakan login atau register untuk menyimpan destinasi ke favorit.",
-                [
-                {
-                    text: "Batal",
-                    style: "cancel",
-                },
-                {
-                    text: "Register",
-                    onPress: () =>
-                    router.push("/auth/register"),
-                },
-                {
-                    text: "Login",
-                    onPress: () =>
-                    router.push("/auth/login"),
-                },
-                ]
-            );
+          setIsAuthenticated(!!token);
+        };
 
-            return;
-            }
+        checkAuthentication();
+      }, [])
+    );
+    
+    const toggleFavorite = async () => {
+      try {
+        const token =
+          await SecureStore.getItemAsync("token");
 
-            setLoadingFavorite(true);
-
-            // Hapus dari favorite
-            if (isFavorite) {
-            await api.delete(
-                `/favorites/${destination._id}`
-            );
-
-            setIsFavorite(false);
-
-            Alert.alert(
-                "Favorite",
-                "Destinasi dihapus dari favorite."
-            );
-
-            } else {
-            // Tambahkan ke favorite
-            await api.post(
-                `/favorites/${destination._id}`
-            );
-
-            setIsFavorite(true);
-
-            Alert.alert(
-                "Favorite",
-                "Destinasi berhasil disimpan."
-            );
-            }
-
-        } catch (error: any) {
-
-            console.error(
-            "GAGAL FAVORITE MOBILE:",
-            error
-            );
-
-            Alert.alert(
-            "Gagal mengubah favorite",
-            error.response?.data?.message ||
-                "Terjadi kesalahan saat mengubah favorite."
-            );
-
-        } finally {
-            setLoadingFavorite(false);
+        if (!token) {
+          return;
         }
+
+        setLoadingFavorite(true);
+
+        if (isFavorite) {
+          await api.delete(
+            `/favorites/${destination._id}`
+          );
+
+          setIsFavorite(false);
+
+          Alert.alert(
+            "Favorite",
+            "Destinasi dihapus dari favorite."
+          );
+        } else {
+          await api.post(
+            `/favorites/${destination._id}`
+          );
+
+          setIsFavorite(true);
+
+          Alert.alert(
+            "Favorite",
+            "Destinasi berhasil disimpan."
+          );
+        }
+      } catch (error: any) {
+        console.error(
+          "GAGAL FAVORITE MOBILE:",
+          error
+        );
+
+        Alert.alert(
+          "Gagal mengubah favorite",
+          error.response?.data?.message ||
+            "Terjadi kesalahan saat mengubah favorite."
+        );
+      } finally {
+        setLoadingFavorite(false);
+      }
     };
 
   useEffect(() => {
@@ -313,22 +307,25 @@ export default function DetailScreen() {
           CERITA DESTINASI
         </Text>
 
-        <Pressable
-          style={[
-            styles.favoriteSmallButton,
-            isFavorite && styles.favoriteSmallButtonActive,
-          ]}
-          onPress={toggleFavorite}
-          disabled={loadingFavorite}
-        >
-          <Text style={styles.favoriteSmallText}>
-            {loadingFavorite
-              ? "..."
-              : isFavorite
-              ? "♥"
-              : "♡"}
-          </Text>
-        </Pressable>
+        {isAuthenticated && (
+          <Pressable
+            style={[
+              styles.favoriteSmallButton,
+              isFavorite &&
+                styles.favoriteSmallButtonActive,
+            ]}
+            onPress={toggleFavorite}
+            disabled={loadingFavorite}
+          >
+            <Text style={styles.favoriteSmallText}>
+              {loadingFavorite
+                ? "..."
+                : isFavorite
+                ? "♥"
+                : "♡"}
+            </Text>
+          </Pressable>
+        )}
 
       </View>
 
